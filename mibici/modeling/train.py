@@ -122,13 +122,14 @@ def _sentinela(valor: float, defecto):
 
 
 def _params_limpios(modelo) -> dict:
-    """get_params() del estimador final, serializable y sin ruido."""
+    """get_params() del estimador final, con prefijo hp_ para no chocar con los
+    parámetros que MLflow Project registra desde la línea de comandos."""
     est = modelo
     if hasattr(modelo, "named_steps"):  # Pipeline: reporta el estimador final
         est = list(modelo.named_steps.values())[-1]
     out = {}
     for k, v in est.get_params(deep=False).items():
-        out[k] = v if isinstance(v, (int, float, str, bool, type(None))) else str(v)
+        out[f"hp_{k}"] = v if isinstance(v, (int, float, str, bool, type(None))) else str(v)
     return out
 
 
