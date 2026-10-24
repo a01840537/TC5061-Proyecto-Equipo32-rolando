@@ -218,5 +218,7 @@ reports/figures/pca_p3_mibici_final.png
 reports/p2/
 
 
-# Resultados generados por P1 (se registran en MLflow, no en Git)
+# Salidas locales de los entrenamientos (viven como artefactos en MLflow)
 reports/p1/
+reports/p2/
+reports/*_config.json
