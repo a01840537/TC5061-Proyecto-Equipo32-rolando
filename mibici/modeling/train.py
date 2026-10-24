@@ -459,8 +459,7 @@ def correr_p3(model, k, contexto, nested=False, run_name=None):
         stage="baseline" if es_baseline else "candidato",
         params={
             **_params_limpios(modelo),
-            "modelo": type(modelo).__name__,
-            "k": k_,
+            "modelo": type(modelo).__name__,            
             "estaciones_train": len(x_train),
             "train_inicio": P3_TRAIN_START[:10],
             "train_fin": P3_TRAIN_END[:10],
