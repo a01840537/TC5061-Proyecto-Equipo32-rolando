@@ -282,3 +282,60 @@ siguiendo [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/)
 
 El detalle de qué hizo cada integrante (commits, Pull Requests y revisiones) está en
 [`CONTRIBUCIONES.md`](CONTRIBUCIONES.md).
+
+## Entrega 2 — Servidor de tracking, MLflow Project y Model Registry
+
+### Servidor de tracking local
+
+El Model Registry requiere un backend respaldado por base de datos. El servidor se
+levanta desde la raíz del repositorio, en una terminal dedicada:
+
+```bash
+mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000
+```
+
+En la terminal de trabajo, todos los procesos se apuntan al servidor mediante la
+variable de entorno:
+
+```bash
+# Windows PowerShell
+$env:MLFLOW_TRACKING_URI = "http://127.0.0.1:5000"
+# Linux / macOS
+export MLFLOW_TRACKING_URI=http://127.0.0.1:5000
+```
+
+La interfaz queda en http://127.0.0.1:5000. La base (`mlflow.db`), `mlruns/` y
+`mlartifacts/` están excluidos del repositorio vía `.gitignore`.
+
+### Ejecución como MLflow Project
+
+El entorno está declarado en `python_env.yaml`; en Windows las corridas se lanzan
+con el entorno activo (`--env-manager local`). Todas las corridas de la entrega 2
+se ejecutan vía `mlflow run`, nunca desde notebooks:
+
+```bash
+# Ingesta reproducible
+mlflow run . -e ingest --env-manager local --experiment-name mibici-equipo32
+
+# Entrenamiento (pregunta, modelo e hiperparámetros; -1 = default de config.py)
+mlflow run . -e train -P question=p2 -P model=hgb -P learning_rate=0.05 --env-manager local --experiment-name mibici-equipo32
+
+# Búsqueda de hiperparámetros con nested runs
+mlflow run . -e search -P question=p2 -P model=hgb --env-manager local --experiment-name mibici-equipo32
+
+# Registro del mejor modelo y verificación de carga por alias
+mlflow run . -e register -P question=p2 --env-manager local
+mlflow run . -e verify -P question=p2 --env-manager local
+```
+
+### Esquema del Model Registry
+
+Un modelo registrado por pregunta: `mibici-equipo32-p1-demanda`,
+`mibici-equipo32-p2-riesgo` y `mibici-equipo32-p3-grupos`. El ciclo de vida usa el
+esquema vigente de **aliases**: `champion` apunta a la versión en producción y
+`challenger` a la segunda mejor. Se eligió aliases sobre las etapas clásicas porque
+es el esquema recomendado por MLflow (las etapas están deprecadas), permite más de
+un rol por modelo sin transiciones destructivas, y el modelo en producción se carga
+por nombre estable: `models:/mibici-equipo32-p1-demanda@champion`. Cada versión
+registrada documenta su linaje en la descripción: corrida de origen, commit de Git
+y versión de los datos (`data_version`).
