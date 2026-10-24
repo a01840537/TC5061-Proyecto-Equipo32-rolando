@@ -1,0 +1,33 @@
+name: tc5061-mibici-rolando
+
+python_env: python_env.yaml
+
+entry_points:
+  ingest:
+    command: "python -m mibici.dataset"
+
+  train:
+    parameters:
+      question: {type: string, default: "p1"}
+      model: {type: string, default: "baseline"}
+      max_iter: {type: float, default: -1}
+      learning_rate: {type: float, default: -1}
+      max_depth: {type: float, default: -1}
+      k: {type: float, default: -1}
+    command: "python -m mibici.modeling.train --question {question} --model {model} --max-iter {max_iter} --learning-rate {learning_rate} --max-depth {max_depth} --k {k}"
+
+  search:
+    parameters:
+      question: {type: string, default: "p2"}
+      model: {type: string, default: "hgb"}
+    command: "python -m mibici.modeling.search --question {question} --model {model}"
+
+  register:
+    parameters:
+      question: {type: string, default: "p1"}
+    command: "python -m mibici.modeling.registrar --question {question}"
+
+  verify:
+    parameters:
+      question: {type: string, default: "p1"}
+    command: "python -m mibici.modeling.verificar --question {question}"
