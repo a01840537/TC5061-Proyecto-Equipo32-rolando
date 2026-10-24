@@ -1,4 +1,11 @@
-# TC5061-Proyecto-Equipo32
+# TC5061-Proyecto-Equipo32-rolando
+
+> **Continuación individual** del proyecto integrador, a cargo de Rolando Calderón Carballo
+> (A01840537). Parte del repositorio del equipo
+> [TC5061-Proyecto-Equipo32](https://github.com/a01840537/TC5061-Proyecto-Equipo32)
+> (primera entrega, calificada), conservando su historial completo; de aquí en adelante el
+> desarrollo en este repositorio es individual.
+
 Proyecto integrador de TC5061 (Operaciones de aprendizaje automático): propuesta de solución de ML
 sobre los datos abiertos de [MiBici](https://mibici.net/es/datos-abiertos/), el sistema de bicicleta
 pública del Área Metropolitana de Guadalajara. Datos: ene–dic 2025 (4,532,032 viajes, 484 estaciones).
@@ -17,7 +24,6 @@ El ML Canvas y el diagrama de arquitectura se encuentran en `references/`.
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
-Entrega de la semana 5 con datos de MiBici
 
 ## Project Organization
 
@@ -264,9 +270,8 @@ Convenciones: ramas `feat/`, `fix/`, `docs/` + descripción corta; mensajes de c
 siguiendo [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/). La rama
 `main` está protegida; cada integrante abre al menos un PR y revisa al menos uno.
 
-Para P3 se utiliza la rama `feature/p3-clustering`.
 
-## Equipo 32
+## Equipo 32 (autores de la base)
 
 | Integrante | Matrícula | GitHub | Rol |
 |------------|-----------|--------|-----|
