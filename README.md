@@ -122,22 +122,37 @@ Los datos crudos, intermedios y procesados no se versionan en Git.
 ## Reproducción completa desde un clon limpio
 
 ```bash
-git clone https://github.com/a01840537/TC5061-Proyecto-Equipo32.git
-cd TC5061-Proyecto-Equipo32
+git clone https://github.com/a01840537/TC5061-Proyecto-Equipo32-rolando.git
+cd TC5061-Proyecto-Equipo32-rolando
 python -m venv .venv
 source .venv/bin/activate          # Windows (PowerShell): .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 
-python -m mibici.dataset           # 1. ingesta: data/raw -> data/processed + data/manifest.json
-python -m pytest tests             # 2. pruebas de no fuga de información (P1)
-make train                         # 3. P1, P2 y P3 en el experimento mibici-equipo32
-make mlflow-ui                     # 4. http://localhost:5000
+# Servidor de tracking (terminal aparte, desde la raíz del repositorio)
+mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000
+export MLFLOW_TRACKING_URI=http://127.0.0.1:5000   # PowerShell: $env:MLFLOW_TRACKING_URI = "http://127.0.0.1:5000"
+
+# Entrega 2: todo se ejecuta vía MLflow Project (en Windows con --env-manager local)
+mlflow run . -e ingest --env-manager local --experiment-name mibici-equipo32    # 1. ingesta
+python -m pytest tests                                                          # 2. pruebas de no fuga (P1)
+mlflow run . -e train  -P question=p1 -P model=naive       --env-manager local --experiment-name mibici-equipo32
+mlflow run . -e train  -P question=p1 -P model=poisson     --env-manager local --experiment-name mibici-equipo32
+mlflow run . -e search -P question=p1 -P model=hgb         --env-manager local --experiment-name mibici-equipo32
+mlflow run . -e train  -P question=p2 -P model=logreg      --env-manager local --experiment-name mibici-equipo32
+mlflow run . -e search -P question=p2 -P model=hgb         --env-manager local --experiment-name mibici-equipo32
+mlflow run . -e train  -P question=p3 -P model=kmeans2     --env-manager local --experiment-name mibici-equipo32
+mlflow run . -e train  -P question=p3 -P model=agglo -P k=4 --env-manager local --experiment-name mibici-equipo32
+mlflow run . -e search -P question=p3 -P model=kmeans      --env-manager local --experiment-name mibici-equipo32
+mlflow run . -e register -P question=p1 --env-manager local   # ídem para p2 y p3
+mlflow run . -e verify   -P question=p1 --env-manager local   # ídem para p2 y p3
 ```
 
-`make train` equivale a ejecutar `python -m mibici.modeling.p1_regresion`,
-`python -m mibici.modeling.p2_clasificacion` y `python -m mibici.modeling.p3_clustering`.
 La ingesta debe producir `data_version = 7aa5e436d887`; si el valor cambia, los archivos de MiBici
 descargados no son los mismos que se usaron en los experimentos.
+
+> Flujo de la entrega 1 (legado): `make train` ejecuta directamente los módulos
+> `p1_regresion`, `p2_clasificacion` y `p3_clustering`. Sigue funcionando, pero la
+> entrega 2 lanza todo mediante `mlflow run` como se documenta arriba.
 
 **Privacidad.** Los CSV de MiBici incluyen un pseudónimo de usuario, el género y el año de nacimiento.
 Como ninguna pregunta los necesita, `dataset.py` los elimina antes de escribir los Parquet procesados
