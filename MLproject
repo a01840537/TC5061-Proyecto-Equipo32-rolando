@@ -31,3 +31,8 @@ entry_points:
     parameters:
       question: {type: string, default: "p1"}
     command: "python -m mibici.modeling.verificar --question {question}"
+
+  validate:
+    parameters:
+      sample: {type: float, default: 50000}
+    command: "python -m mibici.data_validation --sample {sample}"    

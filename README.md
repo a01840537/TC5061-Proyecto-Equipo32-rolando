@@ -354,3 +354,83 @@ un rol por modelo sin transiciones destructivas, y el modelo en producción se c
 por nombre estable: `models:/mibici-equipo32-p1-demanda@champion`. Cada versión
 registrada documenta su linaje en la descripción: corrida de origen, commit de Git
 y versión de los datos (`data_version`).
+
+## Actividad 7 — Pruebas y chequeos de seguridad
+
+Esta sección documenta las pruebas automatizadas y los chequeos de seguridad
+integrados al repositorio (trabajo individual: Rolando Calderón Carballo, A01840537).
+
+### Pruebas (pytest)
+
+```powershell
+python -m pytest tests -v
+```
+
+**Resultado: 26 pruebas en verde** en 4 suites:
+
+| Suite | Qué cubre |
+|---|---|
+| `tests/test_features_p1.py` | No-fuga temporal de los rezagos de P1 (3 pruebas, entrega 1) |
+| `tests/test_dataset.py` | Ingesta: normalización de columnas con acentos y variantes históricas, fechas inválidas → NaT, minimización de datos personales, fallback utf-8 → latin-1, hash SHA-256 determinista y sensible a 1 byte (10 pruebas) |
+| `tests/test_features_p2.py` | Etiqueta de riesgo de P2 con viajes sintéticos: `sin_bicis` / `sin_anclajes` / `normal`; casos límite: capacidad 0 descartada, filas sin ventana futura descartadas, horizonte fuera de [1, 24) lanza `ValueError` (6 pruebas) |
+| `tests/test_reproducibilidad.py` | Misma semilla ⇒ predicciones idénticas en P1 (HGB y Poisson), P2 (probabilidades) y P3 (KMeans), más control negativo con semilla distinta (5 pruebas) |
+
+### Validación de datos (DeepChecks)
+
+```powershell
+mlflow run . -e validate --env-manager local
+# equivalente: python -m mibici.data_validation --sample 50000
+```
+
+Corre dos suites sobre la tabla de modelado de P1 y deja reportes HTML en
+`reports/validacion/` (excluidos de git por tamaño):
+
+- **`data_integrity` sobre TRAIN: 12/12 chequeos aprobados** (sin duplicados,
+  nulos mezclados, columnas constantes ni conflictos de tipo).
+- **`train_test_validation` TRAIN vs TEST: 11/12.** El único fallo es
+  *Feature Drift* en `dias_activa` (KS ≈ 0.99), y es esperado: la feature
+  cuenta días desde la primera actividad de cada estación, por lo que en TEST
+  (meses posteriores) su distribución se desplaza por construcción. Es deriva
+  determinística de una feature temporal, no un problema de calidad de datos.
+
+Notas de compatibilidad (documentadas en `mibici/data_validation.py`):
+DeepChecks 0.19.1 requiere tres ajustes con scikit-learn ≥ 1.8 / NumPy 2 /
+Python ≥ 3.12 — reinscribir el scorer `max_error`, restaurar el alias
+`np.Inf` y `setuptools<81` (provee `pkg_resources`).
+
+### Auditoría de dependencias (pip-audit)
+
+```powershell
+pip-audit
+```
+
+- **Antes:** 86 vulnerabilidades conocidas en 12 paquetes (todas transitivas,
+  salvo mlflow 3.17.1 → CVE-2026-53995).
+- **Remediación:** actualización de mlflow a 3.17.2 y de las dependencias
+  transitivas afectadas (aiohttp, certifi, filelock, gitpython, multidict,
+  opentelemetry, pillow, pyasn1, tornado, werkzeug).
+- **Después: 3 hallazgos, todos en setuptools 80.10.2 — riesgo aceptado.**
+  El fix pide setuptools ≥ 83, pero DeepChecks 0.19.1 depende de
+  `pkg_resources`, retirado de setuptools ≥ 81. Al ser una herramienta de
+  desarrollo local sin servicios expuestos, se acepta el riesgo y se
+  re-evaluará cuando DeepChecks publique soporte para setuptools nuevos.
+
+### Análisis estático de seguridad (bandit)
+
+```powershell
+bandit -r mibici
+```
+
+**Resultado: 0 hallazgos Medium/High y 13 Low en 2,926 líneas.** Los 13 son el
+mismo patrón en `p1_regresion.py`, `p2_clasificacion.py` y `p3_clustering.py`:
+las llamadas a `git rev-parse HEAD` / `git status` que capturan el commit para
+el linaje de MLflow (reglas B404/B603/B607, CWE-78). Se aceptan sin cambios:
+el comando es una lista fija de argumentos, sin entrada del usuario y sin
+`shell=True`, que es exactamente la forma segura que bandit recomienda.
+
+### Higiene del repositorio
+
+`.gitignore` excluye credenciales y datos (`.env`, `data/`, `mlflow.db`,
+`mlruns/`, `mlartifacts/`, modelos serializados) y los reportes pesados de
+validación (`reports/validacion/`). Las versiones de todas las herramientas
+quedan pineadas en `requirements.txt`.
