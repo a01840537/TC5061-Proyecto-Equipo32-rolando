@@ -224,3 +224,5 @@ reports/p2/
 reports/*_config.json
 
 reports/validacion/
+
+models/api/

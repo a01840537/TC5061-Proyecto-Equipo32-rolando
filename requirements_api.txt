@@ -1,0 +1,13 @@
+﻿# Dependencias mínimas del contenedor de la API (Actividad 8).
+# Mismas versiones que el entorno donde se entrenó y registró el modelo,
+# para que la deserialización (skops) y las predicciones sean idénticas.
+
+fastapi==0.141.1
+uvicorn==0.53.0
+pydantic==2.13.5
+
+mlflow-skinny==3.17.2
+scikit-learn==1.9.1
+pandas==3.0.6
+numpy==2.5.4
+skops==0.15.0
