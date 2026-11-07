@@ -434,3 +434,85 @@ el comando es una lista fija de argumentos, sin entrada del usuario y sin
 `mlruns/`, `mlartifacts/`, modelos serializados) y los reportes pesados de
 validación (`reports/validacion/`). Las versiones de todas las herramientas
 quedan pineadas en `requirements.txt`.
+
+## Actividad 8 — API REST del modelo en contenedor (FastAPI + Podman)
+
+El modelo champion de P1 (demanda) se sirve como API REST con FastAPI,
+empaquetado en un contenedor OCI (trabajo individual: Rolando Calderón
+Carballo, A01840537).
+
+### Arquitectura del servicio
+
+```
+Model Registry (MLflow)                  imagen OCI (mibici-api)
+models:/mibici-equipo32-p1-demanda@champion
+        │  python -m mibici.api.exportar         ┌─────────────────────┐
+        └──> models/api/p1/ ──  podman build ──> │ FastAPI + modelo    │
+             (modelo + linaje.json)              │ :8000 /predict      │
+                                                 └─────────────────────┘
+```
+
+- **Recuperación del modelo (opción elegida):** el modelo se recupera del
+  Model Registry **por nombre y alias** (`mibici-equipo32-p1-demanda@champion`,
+  versión 1) con `python -m mibici.api.exportar`, que descarga los artefactos
+  y escribe `models/api/p1/linaje.json` con la trazabilidad (versión, run,
+  `git_commit`, `data_version`). El Containerfile empaqueta ese directorio en
+  la imagen: el contenedor queda **autocontenido** y no depende del servidor
+  de MLflow en tiempo de ejecución. La alternativa (conectar el contenedor al
+  registry vía `MLFLOW_TRACKING_URI=http://host.containers.internal:5000`) se
+  descartó porque acopla el servicio a un servidor local vivo. El endpoint
+  `GET /info` expone el linaje completo para auditar qué modelo responde.
+- **Estrategia de despliegue:** inferencia **en tiempo real** (API síncrona),
+  porque el caso de uso — consultar la demanda esperada de una estación para
+  el día siguiente — es una consulta puntual de baja latencia. Un esquema por
+  lotes sería la evolución natural para pre-calcular las ~300 estaciones cada
+  noche.
+
+### Construir y ejecutar
+
+```powershell
+# 1. Exportar el champion desde el registry (servidor MLflow arriba)
+$env:MLFLOW_TRACKING_URI = "http://127.0.0.1:5000"
+python -m mibici.api.exportar
+
+# 2. Construir la imagen (Podman o Docker, mismo Containerfile)
+podman build -t mibici-api .
+
+# 3. Ejecutar el contenedor
+podman run -d --name mibici-api -p 8000:8000 mibici-api
+```
+
+### Consumir la API
+
+| Método | Ruta       | Descripción                                        |
+|--------|------------|----------------------------------------------------|
+| GET    | `/health`  | Prueba de vida del servicio y del modelo           |
+| GET    | `/info`    | Linaje: registry, versión, run, commit, datos      |
+| POST   | `/predict` | Predicción de viajes del día siguiente (JSON)      |
+| GET    | `/docs`    | Documentación interactiva (Swagger UI)             |
+
+Ejemplo de petición y respuesta:
+
+```powershell
+curl.exe -s -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -d '{\"dia_semana\":2,\"fin_semana\":0,\"feriado\":0,\"lag_1\":48,\"lag_2\":51,\"lag_7\":45,\"lag_14\":50,\"media_7d\":47.3,\"media_28d\":44.9,\"media_mismo_dia_4sem\":46.5,\"dias_activa\":180,\"capacidad\":24}'
+```
+
+```json
+{"viajes_predichos": 48.54, "modelo": "mibici-equipo32-p1-demanda", "version": "1"}
+```
+
+Las entradas se validan con Pydantic (`mibici/api/esquemas.py`): tipos,
+rangos (p. ej. `0 <= dia_semana <= 6`, `capacidad > 0`) y coherencia entre
+campos (`fin_semana` debe corresponder a `dia_semana`); una entrada inválida
+responde 422 con el detalle. La prueba `tests/test_api.py` garantiza que el
+esquema de la API esté alineado con las variables reales del modelo
+(`P1_FEATURES`).
+
+### Notas de Podman en Windows
+
+- La máquina se creó liviana: `podman machine init --cpus 1 --memory 2048`.
+- En este entorno el modo rootless no publicaba los puertos; se cambió a
+  `podman machine set --rootful` (requiere reconstruir la imagen, que vive
+  en otro almacén).
+- Con proxy corporativo, `curl` necesita `--noproxy "*"` para peticiones a
+  `127.0.0.1`; el navegador (`http://127.0.0.1:8000/docs`) no lo necesita.
