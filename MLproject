@@ -36,3 +36,9 @@ entry_points:
     parameters:
       sample: {type: float, default: 50000}
     command: "python -m mibici.data_validation --sample {sample}"    
+
+monitor:
+    command: "python -m mibici.monitoring.drift"
+
+  ab_test:
+    command: "python -m mibici.monitoring.ab_testing"

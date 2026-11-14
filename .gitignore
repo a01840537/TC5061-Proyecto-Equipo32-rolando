@@ -226,3 +226,4 @@ reports/*_config.json
 reports/validacion/
 
 models/api/
+reports/monitoreo/
