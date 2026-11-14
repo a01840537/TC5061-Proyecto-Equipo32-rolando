@@ -516,3 +516,26 @@ esquema de la API esté alineado con las variables reales del modelo
   en otro almacén).
 - Con proxy corporativo, `curl` necesita `--noproxy "*"` para peticiones a
   `127.0.0.1`; el navegador (`http://127.0.0.1:8000/docs`) no lo necesita.
+
+
+  ## Actividad 10 — Monitoreo de drift y A/B testing
+
+Capa de observabilidad del proyecto (trabajo individual: Rolando Calderón
+Carballo, A01840537). Detalle completo en
+`docs/TC5061_Drift_ABTest_Equipo32.pdf`.
+
+- **Drift (Evidently):** `python -m mibici.monitoring.drift` (o
+  `mlflow run . -e monitor --env-manager local`). Compara referencia
+  (TRAIN ene–sep 2025) vs actual (TEST nov–dic 2025) y deja el reporte en
+  `reports/monitoreo/drift_p1.html`. Resultado: 1 de 13 variables con drift
+  (`dias_activa`, Wasserstein 2.59) — deriva determinística por construcción;
+  variables de decisión y etiqueta estables.
+- **A/B testing:** `python -m mibici.monitoring.ab_testing` (o
+  `mlflow run . -e ab_test`). Reentrena el pipeline del champion con
+  ene–nov (v3, alias `@challenger` en el Registry) y evalúa ambas versiones
+  sobre diciembre, que ninguna vio al entrenar. Resultado: el champion (v1)
+  gana en todas las métricas (MAE 5.72 vs 5.78); sin drift en las variables
+  de decisión, reentrenar no aporta y el champion se mantiene.
+- **Continuous Training:** recomendación de reentrenamiento disparado por
+  monitoreo (drift o degradación de MAE), no por calendario; justificación
+  en el PDF.
