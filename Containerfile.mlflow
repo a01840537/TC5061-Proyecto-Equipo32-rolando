@@ -1,0 +1,12 @@
+# Servidor de MLflow (tracking + Model Registry) para la orquestación con
+# Compose — misma versión de MLflow que el proyecto (requirements.txt).
+# El backend (mlflow.db) y los artefactos (mlartifacts/) llegan por volumen
+# desde la raíz del repositorio (ver docker-compose.yml).
+
+FROM docker.io/library/python:3.14-slim
+
+RUN pip install --no-cache-dir mlflow==3.17.2
+
+EXPOSE 5000
+WORKDIR /mlflow
+CMD ["mlflow", "server", "--backend-store-uri", "sqlite:///mlflow.db", "--host", "0.0.0.0", "--port", "5000"]

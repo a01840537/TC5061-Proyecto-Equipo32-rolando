@@ -1,0 +1,59 @@
+# CI/CD del proyecto MiBici (Actividad 9).
+# En cada push a main y en cada pull request:
+#   1. pruebas  — corre la suite completa de pytest (34 pruebas).
+#   2. imagen   — construye la imagen OCI de la API y valida el levantamiento:
+#                 arranca el contenedor y comprueba /health y /predict.
+# El modelo real vive en el Model Registry local (no en git), así que el CI
+# genera un modelo de humo con el mismo pipeline (scripts/modelo_stub.py)
+# para poder construir y validar la imagen de punta a punta.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Instalar dependencias del proyecto
+        run: pip install -r requirements.txt
+      - name: Suite de pruebas
+        run: python -m pytest tests -q
+
+  imagen:
+    needs: pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+      - name: Dependencias mínimas de la API (+ las del pipeline de P1)
+        run: pip install -r requirements_api.txt loguru matplotlib
+      - name: Modelo de humo (el champion real no vive en git)
+        run: python scripts/modelo_stub.py
+      - name: Construir la imagen de la API
+        run: docker build -t mibici-api .
+      - name: Validar el levantamiento (health + predict)
+        run: |
+          docker run -d --name mibici-api -p 8000:8000 mibici-api
+          for i in $(seq 1 15); do
+            curl -sf http://127.0.0.1:8000/health && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:8000/health
+          curl -sf -X POST http://127.0.0.1:8000/predict \
+            -H "Content-Type: application/json" \
+            -d '{"dia_semana":2,"fin_semana":0,"feriado":0,"lag_1":48,"lag_2":51,"lag_7":45,"lag_14":50,"media_7d":47.3,"media_28d":44.9,"media_mismo_dia_4sem":46.5,"dias_activa":180,"capacidad":24}'
+      - name: Logs del contenedor (si algo falló)
+        if: failure()
+        run: docker logs mibici-api || true
