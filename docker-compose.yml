@@ -1,0 +1,43 @@
+# Orquestación del sistema MiBici (Actividad 9) — estándar Compose:
+# funciona igual con docker compose o podman-compose.
+#
+#   podman-compose up -d --build     # levanta todo con un comando
+#   podman-compose ps                # estado de los servicios
+#   podman-compose down              # apaga todo
+#
+# Servicios:
+#   api    — la API REST del modelo champion de P1 (Semana 8), autocontenida.
+#   mlflow — el servidor de tracking + Model Registry del proyecto, sirviendo
+#            el mlflow.db y los artefactos del repositorio (montados como
+#            volumen), para consulta de experimentos y linaje.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: mibici-api
+    container_name: mibici-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MODELO_DIR=/app/modelo
+    depends_on:
+      - mlflow
+    restart: unless-stopped
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Containerfile.mlflow
+    image: mibici-mlflow
+    container_name: mibici-mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      # El repositorio completo: mlflow.db y mlartifacts/ quedan visibles
+      # dentro del contenedor con las mismas rutas relativas que usa el
+      # servidor local del proyecto.
+      - .:/mlflow
+    working_dir: /mlflow
+    restart: unless-stopped

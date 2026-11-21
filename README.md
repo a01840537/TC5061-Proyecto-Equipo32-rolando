@@ -539,3 +539,43 @@ Carballo, A01840537). Detalle completo en
 - **Continuous Training:** recomendación de reentrenamiento disparado por
   monitoreo (drift o degradación de MAE), no por calendario; justificación
   en el PDF.
+
+  ## Actividad 9 — Orquestación, CI/CD y FinOps
+
+Sistema operable completo (trabajo individual: Rolando Calderón Carballo,
+A01840537). Detalle y análisis en `docs/TC5061_Operacion_FinOps_Equipo32.pdf`.
+
+### Levantar el sistema con un comando
+
+```powershell
+podman build -t mibici-api -f Containerfile .
+podman build -t mibici-mlflow -f Containerfile.mlflow .
+podman-compose up -d        # api (:8000) + servidor MLflow (:5000)
+podman-compose down         # apagar todo
+```
+
+El `docker-compose.yml` es estándar Compose (funciona igual con Docker).
+La API es autocontenida (modelo empaquetado); el servicio de MLflow sirve
+el tracking y el Model Registry del proyecto desde `mlflow.db` (volumen).
+
+### Pipeline de CI/CD (GitHub Actions)
+
+`.github/workflows/ci.yml`, en cada push a main y en cada pull request:
+1. **pruebas** — la suite completa de pytest (34 pruebas), con caché de pip.
+2. **imagen** — genera un modelo de humo (`scripts/modelo_stub.py`, porque
+   el champion real vive en el Model Registry y no en git), construye la
+   imagen OCI y valida el levantamiento: arranca el contenedor y comprueba
+   `/health` y `/predict`.
+
+### Prueba de carga (Locust)
+
+```powershell
+$env:NO_PROXY = "127.0.0.1,localhost"
+locust -f scripts/locustfile.py --headless -u 50 -r 5 -t 3m --host http://127.0.0.1:8000 --html reports/carga/locust_u50.html --csv reports/carga/locust_u50
+```
+
+Resultado (50 usuarios, 3 min): 3,969 peticiones, **0% de error**,
+~20 predicciones/s sostenidas con p50 ≈ 1.0 s y p95 ≈ 2.3 s; el contenedor
+de la API saturado en CPU (~99%, un worker de uvicorn) con solo 199 MB de
+RAM. El análisis de costo por inferencia y las optimizaciones están en el
+reporte FinOps (`docs/`).
