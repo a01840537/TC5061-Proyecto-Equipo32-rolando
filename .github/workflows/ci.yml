@@ -38,7 +38,7 @@ jobs:
           python-version: "3.14"
           cache: pip
       - name: Dependencias mínimas de la API (+ las del pipeline de P1)
-        run: pip install -r requirements_api.txt loguru matplotlib
+        run: pip install -r requirements_api.txt loguru matplotlib typer
       - name: Modelo de humo (el champion real no vive en git)
         run: python scripts/modelo_stub.py
       - name: Construir la imagen de la API
