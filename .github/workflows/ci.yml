@@ -42,7 +42,7 @@ jobs:
       - name: Modelo de humo (el champion real no vive en git)
         run: python scripts/modelo_stub.py
       - name: Construir la imagen de la API
-        run: docker build -t mibici-api .
+        run: docker build -t mibici-api -f Containerfile .
       - name: Validar el levantamiento (health + predict)
         run: |
           docker run -d --name mibici-api -p 8000:8000 mibici-api
