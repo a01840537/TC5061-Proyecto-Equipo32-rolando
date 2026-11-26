@@ -24,6 +24,22 @@ El ML Canvas y el diagrama de arquitectura se encuentran en `references/`.
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
 </a>
 
+> **Proyecto integrador TC5061 — sistema MLOps completo.** Predicción de
+> demanda, riesgo y segmentación de estaciones de MiBici (Guadalajara) con
+> el ciclo de vida completo: datos versionados, experimentos trazables,
+> Model Registry, pruebas y seguridad, API en contenedor, CI/CD, carga,
+> FinOps, monitoreo de drift y A/B testing.
+>
+> | Componente | Dónde |
+> |---|---|
+> | Ingesta reproducible y features | `mibici/dataset.py`, `mibici/features.py` |
+> | MLflow Project (entry points) | `MLproject` — train, search, register, verify, validate, monitor, ab_test |
+> | Pruebas (34) y chequeos de seguridad | `tests/`, sección Actividad 7 |
+> | API del modelo + contenedor | `mibici/api/`, `Containerfile`, sección Actividad 8 |
+> | Orquestación, CI/CD, carga, FinOps | `docker-compose.yml`, `.github/workflows/ci.yml`, `scripts/`, sección Actividad 9 |
+> | Monitoreo de drift y A/B testing | `mibici/monitoring/`, sección Actividad 10 |
+> | **Model Card del champion** | [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md) |
+> | Reportes de cada entrega (PDF) | `docs/` |
 
 ## Project Organization
 
